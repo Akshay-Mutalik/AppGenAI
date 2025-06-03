@@ -1,0 +1,15 @@
+{% extends 'index.html' %}
+{% block content %}
+    <h2>Add Data to {{ table_name }}</h2>
+    <form method="post" action="{{ url_for('add', table_name=table_name) }}">
+        <input type="hidden" name="table_name" value="{{ table_name }}">
+        {% for field_name in field_names %}
+            <div class="form-group">
+                <label for="{{ field_name }}">{{ field_name }}</label>
+                <input type="text" class="form-control" id="{{ field_name }}" name="{{ field_name }}" required>
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-success">Add Data</button>
+        <button onclick="history.back()" class="btn btn-secondary">Cancel</a>
+    </form>
+{% endblock %}

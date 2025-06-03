@@ -1,0 +1,63 @@
+{% extends 'index.html' %}
+
+{% block content %}
+    <h2>{{ table_name }} Data</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form method="post" action="{{ url_for('modify') }}">
+        <input type="hidden" name="table_name" value="{{ table_name }}">
+        <div class="table-container">
+            <table class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>Select</th>
+                        {% for field in field_names %}
+                            <th>{{ field }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in data %}
+                        <tr>
+                            <td><input type="checkbox" name="selected_ids" value="{{ row[0] }}" class="item-checkbox"></td>
+                            {% for value in row %}
+                                <td>{{ value }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {# Only show Modify/Delete/Add buttons if the user is an admin #}
+        {% if session.get('role') == 'admin' %}
+            <button type="submit" class="btn btn-primary" id="modify-button" disabled>Modify</button>
+            <button type="submit" class="btn btn-danger" id="delete-button" disabled formaction="{{ url_for('delete') }}">Delete</button>
+            <a href="{{ url_for('add', table_name=table_name) }}" class="btn btn-success">Add</a>
+        {% endif %}
+    </form>
+    <script>
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        const modifyButton = document.getElementById('modify-button');
+        const deleteButton = document.getElementById('delete-button');
+
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                let checkedCount = document.querySelectorAll('.item-checkbox:checked').length;
+                if (modifyButton) { // Check if buttons exist (for admin role)
+                    modifyButton.disabled = checkedCount === 0;
+                }
+                if (deleteButton) { // Check if buttons exist (for admin role)
+                    deleteButton.disabled = checkedCount === 0;
+                }
+            });
+        });
+    </script>
+{% endblock %}

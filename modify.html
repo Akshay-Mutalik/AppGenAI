@@ -1,0 +1,28 @@
+{% extends 'index.html' %}
+
+
+
+{% block content %}
+
+<!-- Menu -->
+
+
+<!-- Menu Ends -->
+    <h2>Modify {{ table_name }} Data</h2>
+    <form method="post" action="{{ url_for('confirm_modify') }}">
+        <input type="hidden" name="table_name" value="{{ table_name }}">
+        <input type="hidden" name="{{ table_name.lower() }}ID" value="{{ data[table_name.lower() + 'ID'] }}">  
+        {% for key, value in data.items() %}
+            <div class="form-group">
+                <label for="{{ key }}">{{ key }}</label>
+                {% if key.endswith(table_name + 'ID') %}
+                    <input type="text" class="form-control" id="{{ key }}" name="{{ key }}" value="{{ value }}" readonly>
+                {% else %}
+                    <input type="text" class="form-control" id="{{ key }}" name="{{ key }}" value="{{ value }}" required>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-success">Confirm Modify</button>
+        <button onclick="history.back()" class="btn btn-secondary">Cancel</a>
+    </form>
+{% endblock %}

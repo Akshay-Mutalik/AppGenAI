@@ -1,0 +1,214 @@
+{% extends 'index.html' %}
+
+{% block content %}
+    <h2>Chatbot</h2>
+    <form id="chatbot-form" >
+        <div class="d-flex flex-wrap justify-content-between mb-3">
+            {# Flex container for dropdowns #}
+            <div class="form-group flex-grow-1 mr-2">
+                {# Project Dropdown #}
+                <label for="project_id">Project:</label>
+                <select class="form-control" id="project_id" name="project_id">
+                    <option value="">Select Project</option>
+                    {% for project in projects %}
+                        <option value="{{ project[0] }}">{{ project[0] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group flex-grow-1 mr-2">
+                {# Usecase Dropdown #}
+                <label for="usecase_id">Usecase:</label>
+                <select class="form-control" id="usecase_id" name="usecase_id" disabled>
+                    <option value="">Select Usecase</option>
+                </select>
+            </div>
+            <div class="form-group flex-grow-1">
+                {# Recipe Dropdown #}
+                <label for="recipe_id">Recipe:</label>
+                <select class="form-control" id="recipe_id" name="recipe_id" disabled>
+                    <option value="">Select Recipe</option>
+                </select>
+            </div>
+        </div>
+
+        {# Recipe Details Textbox #}
+        <div class="form-group">
+            <label for="recipe_details">Recipe Details:</label>
+            <textarea class="form-control" id="recipe_details" rows="8" readonly></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="message">Additional Input:</label>
+            <textarea class="form-control" id="message" name="message" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="file">File:</label>
+            <input type="file" class="form-control-file" enctype="multipart/form-data" id="file" name="file" >
+            <small class="form-text text-muted">Allowed file types: pdf, txt, docx, xlsx, png, jpg, jpeg</small>
+        </div>
+        <button type="submit" class="btn btn-primary">Get Response</button>
+    </form>
+
+    <div id="response-container" style="margin-top: 20px; display: none;">
+        <h2>Response:</h2>
+        <textarea class="form-control" id="response-text" rows="5" readonly></textarea>
+        {# Container for download button #}
+        <div id="download-button-container" class="mt-2"></div>
+        {# Copy to Clipboard button #}
+        <button onclick="copyToClipboard()" class="btn btn-secondary mt-2">Copy to Clipboard</button>
+    </div>
+
+    <script>
+        // Get references to HTML elements
+        const projectIdSelect = document.getElementById('project_id');
+        const usecaseIdSelect = document.getElementById('usecase_id');
+        const recipeIdSelect = document.getElementById('recipe_id');
+        const recipeDetailsTextarea = document.getElementById('recipe_details');
+        const chatbotForm = document.getElementById('chatbot-form');
+        const responseContainer = document.getElementById('response-container');
+        const responseText = document.getElementById('response-text');
+
+        // Event listener for Project dropdown change
+        projectIdSelect.addEventListener('change', () => {
+            const selectedProjectId = projectIdSelect.value;
+            if (selectedProjectId) {
+                fetch(`/chatbot/get_usecases_for_project/${selectedProjectId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        usecaseIdSelect.innerHTML = '<option value="">Select Usecase</option>'; // Clear and add default
+                        data.usecases.forEach(usecaseId => {
+                            usecaseIdSelect.innerHTML += `<option value="${usecaseId}">${usecaseId}</option>`;
+                        });
+                        usecaseIdSelect.disabled = false; // Enable usecase dropdown
+                    })
+                    .catch(error => console.error('Error fetching usecases:', error));
+            } else {
+                // Disable and clear if no project is selected
+                usecaseIdSelect.innerHTML = '<option value="">Select Usecase</option>';
+                usecaseIdSelect.disabled = true;
+                recipeIdSelect.innerHTML = '<option value="">Select Recipe</option>';
+                recipeIdSelect.disabled = true;
+                recipeDetailsTextarea.value = ""; // Clear recipe details
+            }
+        });
+
+        // Event listener for Usecase dropdown change
+        usecaseIdSelect.addEventListener('change', () => {
+            const selectedProjectId = projectIdSelect.value;
+            const selectedUsecaseId = usecaseIdSelect.value;
+            if (selectedProjectId && selectedUsecaseId) {
+                fetch(`/chatbot/get_recipes_for_project_usecase/${selectedProjectId}/${selectedUsecaseId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        recipeIdSelect.innerHTML = '<option value="">Select Recipe</option>'; // Clear and add default
+                        data.recipes.forEach(recipeId => {
+                            recipeIdSelect.innerHTML += `<option value="${recipeId}">${recipeId}</option>`;
+                        });
+                        recipeIdSelect.disabled = false; // Enable recipe dropdown
+                    })
+                    .catch(error => console.error('Error fetching recipes:', error));
+            } else {
+                // Disable and clear if no usecase is selected
+                recipeIdSelect.innerHTML = '<option value="">Select Recipe</option>';
+                recipeIdSelect.disabled = true;
+                recipeDetailsTextarea.value = ""; // Clear recipe details
+            }
+        });
+
+        // Event listener for Recipe dropdown change
+        recipeIdSelect.addEventListener('change', () => {
+            const selectedRecipeId = recipeIdSelect.value;
+            if (selectedRecipeId) {
+                fetch(`/chatbot/get_recipe_details/${encodeURIComponent(selectedRecipeId)}`) // Encode the recipe ID for URL
+                    .then(response => response.json())
+                    .then(data => {
+                        recipeDetailsTextarea.value = data.recipe_details; // Display recipe details
+                    })
+                    .catch(error => {
+                        console.error('Error fetching recipe details:', error);
+                        recipeDetailsTextarea.value = "Error fetching recipe details.";
+                    });
+            } else {
+                recipeDetailsTextarea.value = ""; // Clear the textarea if no recipe is selected
+            }
+        });
+
+        // Event listener for Chatbot form submission
+        chatbotForm.addEventListener('submit', (event) => {
+            event.preventDefault(); // Prevent default form submission
+
+            const formData = new FormData(chatbotForm); // Create FormData object
+
+            fetch('/chatbot/get_response', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json()) // Parse JSON response
+            .then(data => {
+                if (data.error) {
+                    alert(data.error); // Display error if present
+                    responseContainer.style.display = 'none'; // Hide response area
+                } else {
+                    responseText.value = data.response; // Display bot response
+                    responseContainer.style.display = 'block'; // Show response area
+
+                    const downloadButtonContainer = document.getElementById('download-button-container');
+                    downloadButtonContainer.innerHTML = ''; // Clear any previous download button
+
+                    // Check if file data is available for download
+                    if (data.file_data && data.file_type && data.file_name && data.mime_type) {
+                        const downloadButton = document.createElement('button');
+                        downloadButton.textContent = `Download`; // Button text with filename
+                        downloadButton.classList.add('btn', 'btn-primary', 'mt-2'); // Add Bootstrap styling
+                        downloadButton.addEventListener('click', () => {
+                            let blob;
+
+                            // Handle different file types for Blob creation
+                            if (data.file_type === 'xlsx') {
+                                // For binary data (like XLSX), decode Base64 first
+                                const byteCharacters = atob(data.file_data);
+                                const byteNumbers = new Array(byteCharacters.length);
+                                for (let i = 0; i < byteCharacters.length; i++) {
+                                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                }
+                                const byteArray = new Uint8Array(byteNumbers);
+                                blob = new Blob([byteArray], { type: data.mime_type });
+                            } else {
+                                // For text-based files (text, tsv, feature), use provided mime_type and charset
+                                blob = new Blob([data.file_data], { type: data.mime_type + ';charset=utf-8' });
+                            }
+
+                            // Trigger file download
+                            if (blob) {
+                                const url = URL.createObjectURL(blob); // Create a URL for the Blob
+                                const a = document.createElement('a'); // Create a temporary anchor element
+                                a.href = url;
+                                a.download = data.file_name; // Set download filename
+                                document.body.appendChild(a); // Append to body (required for click)
+                                a.click(); // Programmatically click to trigger download
+                                document.body.removeChild(a); // Clean up temporary element
+                                URL.revokeObjectURL(url); // Release the Blob URL
+                            } else {
+                                alert('Could not create download for this file type.');
+                            }
+                        });
+                        downloadButtonContainer.appendChild(downloadButton); // Add download button to its container
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error); // Log fetch error
+                alert('An error occurred while getting the response.'); // Alert user
+            });
+        });
+
+        // Function to copy response text to clipboard
+        function copyToClipboard() {
+            const responseTextElement = document.getElementById('response-text');
+            responseTextElement.select(); // Select the text in the textarea
+            document.execCommand('copy'); // Copy the selected text
+            window.getSelection().removeAllRanges(); // Deselect the text
+            alert('Response copied to clipboard!'); // Notify user
+        }
+    </script>
+{% endblock %}

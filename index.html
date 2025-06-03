@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Viewer</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .container {
+            margin-top: 20px;
+        }
+        .menu {
+            list-style-type: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+        .menu li {
+            margin-bottom: 10px;
+        }
+        .menu li a {
+            display: block;
+            padding: 10px;
+            background-color: #e9ecef;
+            color: #007bff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .menu li a:hover {
+            background-color: #007bff;
+            color: white;
+        }
+        .table-container {
+            margin-top: 20px;
+        }
+        .logout-btn {
+            display: block;
+            padding: 10px;
+            background-color: #dc3545; /* Red color for logout */
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .logout-btn:hover {
+            background-color: #c82333;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3">
+                <h2>Menu</h2>
+                <ul class="menu">
+                    <li><a href="/chatbot">Chatbot</a></li>
+                    {% if session.get('role') == 'admin' %} {# Only show these for admin #}
+                        {% for table in tables %}
+                        <li><a href="/table/{{table}}"> {{table}} </a></li>
+                        {% endfor %}
+                    {% endif %}
+                </ul>
+                {% if session.get('logged_in') %}
+                    <a href="{{ url_for('logout') }}" class="logout-btn">Logout ({{ session.get('username') }})</a>
+                {% endif %}
+            </div>
+            <div class="col-md-9">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+                {% block content %}
+                    <h1>Welcome to the Data Viewer</h1>
+                    <p>Please select an option from the menu to view data.</p>
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
